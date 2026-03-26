@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package movie;
+
+service MovieService {
+  rpc CreateMovie (MovieRequest) returns (MovieResponse);
+  rpc GetMovie (MovieId) returns (MovieResponse);
+}
+
+message MovieRequest {
+  string title = 1;
+  string userId = 2;
+}
+
+message MovieId {
+  string id = 1;
+}
+
+message MovieResponse {
+  string id = 1;
+  string title = 2;
+  string userId = 3;
+}

@@ -1,0 +1,26 @@
+{
+  "name": "microservices-tp",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Node.js microservices app with gRPC, RabbitMQ, MongoDB Atlas and React client",
+  "main": "api-gateway/server.js",
+  "scripts": {
+    "start:auth": "node auth-service/server.js",
+    "start:user": "node user-service/server.js",
+    "start:movie": "node movie-service/server.js",
+    "start:review": "node review-service/server.js",
+    "start:gateway": "node api-gateway/server.js",
+    "start:client": "npm --prefix movies-client start"
+  },
+  "dependencies": {
+    "@grpc/grpc-js": "^1.12.5",
+    "@grpc/proto-loader": "^0.7.13",
+    "amqplib": "^0.10.8",
+    "bcryptjs": "^3.0.2",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.10.1",
+    "uuid": "^11.1.0"
+  }
+}
