@@ -96,6 +96,11 @@ const tabButtonStyle = (isActive) => ({
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '')
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem('currentUser')
+    return saved ? JSON.parse(saved) : null
+  })
+  const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [activeTab, setActiveTab] = useState(token ? 'movies' : 'login')
@@ -103,11 +108,9 @@ function App() {
 
   const [movies, setMovies] = useState([])
   const [title, setTitle] = useState('')
-  const [userId, setUserId] = useState('')
   const [searchMovieId, setSearchMovieId] = useState('')
 
   const [movieIdForReview, setMovieIdForReview] = useState('')
-  const [userIdForReview, setUserIdForReview] = useState('')
   const [rating, setRating] = useState(5)
   const [comment, setComment] = useState('')
 
@@ -130,7 +133,7 @@ function App() {
       const response = await fetch('/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ fullName, email, password })
       })
 
       if (!response.ok) {
@@ -158,9 +161,11 @@ function App() {
 
       const data = await response.json()
       setToken(data.token)
+      setCurrentUser(data.user)
       localStorage.setItem('token', data.token)
+      localStorage.setItem('currentUser', JSON.stringify(data.user))
       setActiveTab('movies')
-      showSuccess('Connexion réussie.')
+      showSuccess(`Connexion réussie. Bienvenue ${data.user?.fullName || ''}`.trim())
     } catch (err) {
       showError(err.message)
     }
@@ -168,7 +173,9 @@ function App() {
 
   const logout = () => {
     setToken('')
+    setCurrentUser(null)
     localStorage.removeItem('token')
+    localStorage.removeItem('currentUser')
     setActiveTab('login')
     showSuccess('Déconnexion réussie.')
   }
@@ -178,7 +185,7 @@ function App() {
       const response = await fetch('/movies', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeader },
-        body: JSON.stringify({ title, userId })
+        body: JSON.stringify({ title })
       })
 
       if (!response.ok) {
@@ -218,7 +225,6 @@ function App() {
         headers: { 'Content-Type': 'application/json', ...authHeader },
         body: JSON.stringify({
           movieId: movieIdForReview,
-          userId: userIdForReview,
           rating: Number(rating),
           comment
         })
@@ -318,6 +324,15 @@ function App() {
             </div>
 
             <div style={styles.grid}>
+              {activeTab === 'register' && (
+                <input
+                  style={styles.input}
+                  type="text"
+                  placeholder="Nom complet"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                />
+              )}
               <input
                 style={styles.input}
                 type="email"
@@ -342,6 +357,14 @@ function App() {
           </section>
         ) : (
           <>
+            {currentUser && (
+              <section style={styles.card}>
+                <h2 style={styles.sectionTitle}>Utilisateur connecté</h2>
+                <p style={{ margin: 0 }}>
+                  {currentUser.fullName} — {currentUser.email} (id: {currentUser.id})
+                </p>
+              </section>
+            )}
             <div style={styles.tabs}>
               <button style={tabButtonStyle(activeTab === 'movies')} onClick={() => setActiveTab('movies')}>Movies</button>
               <button style={tabButtonStyle(activeTab === 'reviews')} onClick={() => setActiveTab('reviews')}>Reviews</button>
@@ -358,12 +381,6 @@ function App() {
                       placeholder="Titre"
                       value={title}
                       onChange={(e) => setTitle(e.target.value)}
-                    />
-                    <input
-                      style={styles.input}
-                      placeholder="User ID"
-                      value={userId}
-                      onChange={(e) => setUserId(e.target.value)}
                     />
                   </div>
                   <button style={styles.button} onClick={addMovie}>Ajouter le film</button>
@@ -402,12 +419,6 @@ function App() {
                       placeholder="Movie ID"
                       value={movieIdForReview}
                       onChange={(e) => setMovieIdForReview(e.target.value)}
-                    />
-                    <input
-                      style={styles.input}
-                      placeholder="User ID"
-                      value={userIdForReview}
-                      onChange={(e) => setUserIdForReview(e.target.value)}
                     />
                     <input
                       style={styles.input}
