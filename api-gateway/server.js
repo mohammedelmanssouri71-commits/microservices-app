@@ -33,18 +33,43 @@ const reviewClient = new reviewProto.ReviewService('localhost:50053', grpc.crede
 
 let rabbitChannel
 
+function getRabbitMQUrls() {
+  const envUrl = (process.env.RABBITMQ_URL || '').trim()
+  const urls = []
+
+  if (envUrl) {
+    const normalized = /^amqps?:\/\//i.test(envUrl) ? envUrl : `amqp://${envUrl}`
+    urls.push(normalized)
+  }
+
+  if (!urls.includes('amqp://localhost')) {
+    urls.push('amqp://localhost')
+  }
+
+  return urls
+}
+
 async function connectRabbitMQ(retries = 5, delay = 3000) {
-  for (let i = 0; i < retries; i += 1) {
-    try {
-      const conn = await amqplib.connect(process.env.RABBITMQ_URL)
-      console.log('Connected to RabbitMQ')
-      return conn
-    } catch (err) {
-      console.log(`RabbitMQ not ready, retrying in ${delay}ms... (${i + 1}/${retries})`)
-      await new Promise((res) => setTimeout(res, delay))
+  const urls = getRabbitMQUrls()
+
+  for (const url of urls) {
+    for (let i = 0; i < retries; i += 1) {
+      try {
+        const conn = await amqplib.connect(url)
+        console.log(`Connected to RabbitMQ (${url})`)
+        return conn
+      } catch (err) {
+        console.log(
+          `RabbitMQ not ready on ${url}, retrying in ${delay}ms... (${i + 1}/${retries})`
+        )
+        await new Promise((res) => setTimeout(res, delay))
+      }
     }
   }
-  throw new Error('Could not connect to RabbitMQ after retries')
+
+  throw new Error(
+    `Could not connect to RabbitMQ after retries. Tried: ${urls.join(', ')}`
+  )
 }
 
 async function rpcCall(queue, payload) {
