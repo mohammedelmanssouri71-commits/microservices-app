@@ -136,22 +136,25 @@ function grpcToHttpError(err, res) {
 }
 
 async function searchTmdbMovies(query) {
-  const tmdbApiKey = (process.env.TMDB_API_KEY || '').trim()
+  const tmdbToken = (process.env.TMDB_API_KEY || '').trim()
 
-  if (!tmdbApiKey) {
+  if (!tmdbToken) {
     throw new Error('TMDB_API_KEY is missing in environment')
   }
 
-  const url = `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(
+  const baseUrl = `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(
     query
   )}&include_adult=false&language=fr-FR&page=1`
 
-  const response = await fetch(url, {
-    headers: {
-      accept: 'application/json',
-      Authorization: `Bearer ${tmdbApiKey}`
-    }
-  })
+  const requestOptions = { headers: { accept: 'application/json' } }
+  const isV4Token = tmdbToken.startsWith('eyJ') || tmdbToken.includes('.')
+  const url = isV4Token ? baseUrl : `${baseUrl}&api_key=${encodeURIComponent(tmdbToken)}`
+
+  if (isV4Token) {
+    requestOptions.headers.Authorization = `Bearer ${tmdbToken}`
+  }
+
+  const response = await fetch(url, requestOptions)
 
   if (!response.ok) {
     throw new Error(`TMDB error (${response.status})`)

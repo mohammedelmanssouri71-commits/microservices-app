@@ -1,5 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react'
 
+const API_BASE_URL = (process.env.REACT_APP_API_BASE_URL || 'http://localhost:3000').replace(/\/$/, '')
+
+function apiUrl(path) {
+  return `${API_BASE_URL}${path}`
+}
+
 const styles = {
   page: {
     minHeight: '100vh',
@@ -116,7 +122,7 @@ function App() {
 
   const register = async () => {
     try {
-      const response = await fetch('/auth/register', {
+      const response = await fetch(apiUrl('/auth/register'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fullName, email, password })
@@ -132,7 +138,7 @@ function App() {
 
   const login = async () => {
     try {
-      const response = await fetch('/auth/login', {
+      const response = await fetch(apiUrl('/auth/login'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -164,7 +170,7 @@ function App() {
       const query = searchTerm.trim()
       if (!query) throw new Error('Entrez un nom de film à rechercher')
 
-      const response = await fetch(`/movies/search?q=${encodeURIComponent(query)}`, {
+      const response = await fetch(apiUrl(`/movies/search?q=${encodeURIComponent(query)}`), {
         headers: { ...authHeader }
       })
       if (!response.ok) await handleApiError(response)
@@ -178,7 +184,7 @@ function App() {
 
   const loadSavedMovies = async () => {
     try {
-      const response = await fetch('/movies', { headers: { ...authHeader } })
+      const response = await fetch(apiUrl('/movies'), { headers: { ...authHeader } })
       if (!response.ok) await handleApiError(response)
       const data = await response.json()
       setSavedMovies(data.movies || [])
@@ -189,7 +195,7 @@ function App() {
 
   const addMovie = async (movie) => {
     try {
-      const response = await fetch('/movies', {
+      const response = await fetch(apiUrl('/movies'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeader },
         body: JSON.stringify({
@@ -208,7 +214,7 @@ function App() {
 
   const deleteMovie = async (movieId) => {
     try {
-      const response = await fetch(`/movies/${movieId}`, {
+      const response = await fetch(apiUrl(`/movies/${movieId}`), {
         method: 'DELETE',
         headers: { ...authHeader }
       })
@@ -222,7 +228,7 @@ function App() {
 
   const loadReviews = async () => {
     try {
-      const response = await fetch('/reviews', { headers: { ...authHeader } })
+      const response = await fetch(apiUrl('/reviews'), { headers: { ...authHeader } })
       if (!response.ok) await handleApiError(response)
       const data = await response.json()
       setReviews(data.reviews || [])
@@ -233,7 +239,7 @@ function App() {
 
   const createReview = async () => {
     try {
-      const response = await fetch('/reviews', {
+      const response = await fetch(apiUrl('/reviews'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeader },
         body: JSON.stringify({
@@ -256,7 +262,7 @@ function App() {
       const target = reviews.find((review) => review.id === reviewId)
       if (!target) return
 
-      const response = await fetch(`/reviews/${reviewId}`, {
+      const response = await fetch(apiUrl(`/reviews/${reviewId}`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...authHeader },
         body: JSON.stringify({ rating: target.rating, comment: target.comment })
@@ -272,7 +278,7 @@ function App() {
 
   const removeReview = async (reviewId) => {
     try {
-      const response = await fetch(`/reviews/${reviewId}`, {
+      const response = await fetch(apiUrl(`/reviews/${reviewId}`), {
         method: 'DELETE',
         headers: { ...authHeader }
       })
