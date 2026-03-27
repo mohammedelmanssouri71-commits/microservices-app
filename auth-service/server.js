@@ -66,14 +66,23 @@ async function start() {
       let response
       try {
         const payload = JSON.parse(msg.content.toString())
-        const { email, password } = payload
+        const { fullName, email, password } = payload
+
+        if (!fullName || !email || !password) {
+          response = { success: false, message: 'fullName, email and password are required' }
+          channel.sendToQueue(msg.properties.replyTo, Buffer.from(JSON.stringify(response)), {
+            correlationId: msg.properties.correlationId
+          })
+          channel.ack(msg)
+          return
+        }
 
         const existing = await AuthUser.findOne({ email })
         if (existing) {
           response = { success: false, message: 'Email already exists' }
         } else {
           const hashed = await bcrypt.hash(password, 10)
-          const user = new AuthUser({ email, password: hashed })
+          const user = new AuthUser({ fullName, email, password: hashed })
           await user.save()
           response = { success: true, userId: user._id.toString() }
         }
@@ -104,13 +113,21 @@ async function start() {
             response = { success: false, message: 'Invalid credentials' }
           } else {
             const token = jwt.sign(
-              { userId: user._id.toString(), email },
+              { userId: user._id.toString(), email, fullName: user.fullName },
               process.env.JWT_SECRET,
               { expiresIn: '1h' }
             )
             user.token = token
             await user.save()
-            response = { success: true, token }
+            response = {
+              success: true,
+              token,
+              user: {
+                id: user._id.toString(),
+                fullName: user.fullName,
+                email: user.email
+              }
+            }
           }
         }
       } catch (err) {

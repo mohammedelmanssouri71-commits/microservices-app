@@ -137,8 +137,8 @@ function grpcToHttpError(err, res) {
 
 app.post('/auth/register', async (req, res) => {
   try {
-    const { email, password } = req.body
-    const result = await rpcCall('register', { email, password })
+    const { fullName, email, password } = req.body
+    const result = await rpcCall('register', { fullName, email, password })
     if (!result.success) {
       res.status(400).json({ error: result.message })
       return
@@ -157,7 +157,7 @@ app.post('/auth/login', async (req, res) => {
       res.status(401).json({ error: result.message })
       return
     }
-    res.status(200).json({ token: result.token })
+    res.status(200).json({ token: result.token, user: result.user })
   } catch (err) {
     res.status(500).json({ error: err.message })
   }
@@ -171,7 +171,8 @@ app.get('/users/:id', authMiddleware, (req, res) => {
 })
 
 app.post('/movies', authMiddleware, (req, res) => {
-  const { title, userId } = req.body
+  const { title } = req.body
+  const userId = req.user.userId
   movieClient.CreateMovie({ title, userId }, (err, response) => {
     if (grpcToHttpError(err, res)) return
     res.status(201).json(response)
@@ -186,7 +187,8 @@ app.get('/movies/:id', authMiddleware, (req, res) => {
 })
 
 app.post('/reviews', authMiddleware, (req, res) => {
-  const { movieId, userId, rating, comment } = req.body
+  const { movieId, rating, comment } = req.body
+  const userId = req.user.userId
   reviewClient.CreateReview(
     { movieId, userId, rating: Number(rating), comment },
     (err, response) => {
