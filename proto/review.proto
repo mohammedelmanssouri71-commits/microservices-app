@@ -6,6 +6,8 @@ service ReviewService {
   rpc CreateReview (ReviewRequest) returns (ReviewResponse);
   rpc GetReview (ReviewId) returns (ReviewResponse);
   rpc GetMovieReviews (MovieIdRequest) returns (ReviewListResponse);
+  rpc GetUserReviews (UserIdRequest) returns (ReviewListResponse);
+  rpc UpdateReview (UpdateReviewRequest) returns (ReviewResponse);
   rpc DeleteReview (ReviewId) returns (DeleteResponse);
 }
 
@@ -16,12 +18,22 @@ message ReviewRequest {
   string comment = 4;
 }
 
+message UpdateReviewRequest {
+  string id = 1;
+  int32 rating = 2;
+  string comment = 3;
+}
+
 message ReviewId {
   string id = 1;
 }
 
 message MovieIdRequest {
   string movieId = 1;
+}
+
+message UserIdRequest {
+  string userId = 1;
 }
 
 message ReviewResponse {

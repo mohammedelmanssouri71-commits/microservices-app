@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 
 const styles = {
   page: {
@@ -9,47 +9,22 @@ const styles = {
     padding: '32px 16px',
     fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
   },
-  container: {
-    maxWidth: '1000px',
-    margin: '0 auto'
-  },
-  title: {
-    margin: '0 0 8px',
-    fontSize: '2rem'
-  },
-  subtitle: {
-    margin: '0 0 24px',
-    color: '#9ca3af'
-  },
-  alert: {
-    padding: '12px 14px',
-    borderRadius: '10px',
-    marginBottom: '16px',
-    fontWeight: 500
-  },
-  tabs: {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: '10px',
-    marginBottom: '20px'
-  },
+  container: { maxWidth: '1100px', margin: '0 auto' },
+  title: { margin: '0 0 8px', fontSize: '2rem' },
+  subtitle: { margin: '0 0 24px', color: '#9ca3af' },
+  alert: { padding: '12px 14px', borderRadius: '10px', marginBottom: '16px', fontWeight: 500 },
+  tabs: { display: 'flex', flexWrap: 'wrap', gap: '10px', marginBottom: '20px' },
   button: {
     border: 0,
     borderRadius: '10px',
     padding: '10px 14px',
     cursor: 'pointer',
     fontWeight: 600,
-    background: '#374151',
-    color: '#e5e7eb'
-  },
-  activeButton: {
     background: '#2563eb',
-    color: '#ffffff'
+    color: '#fff'
   },
-  ghostButton: {
-    background: '#1f2937',
-    border: '1px solid #4b5563'
-  },
+  ghostButton: { background: '#1f2937', border: '1px solid #4b5563', color: '#e5e7eb' },
+  dangerButton: { background: '#b91c1c', color: '#fff' },
   card: {
     background: 'rgba(17, 24, 39, 0.9)',
     border: '1px solid #374151',
@@ -58,16 +33,8 @@ const styles = {
     boxShadow: '0 8px 30px rgba(0,0,0,0.25)',
     marginBottom: '16px'
   },
-  sectionTitle: {
-    margin: '0 0 12px',
-    fontSize: '1.15rem'
-  },
-  grid: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-    gap: '12px',
-    marginBottom: '12px'
-  },
+  sectionTitle: { margin: '0 0 12px', fontSize: '1.15rem' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px' },
   input: {
     width: '100%',
     boxSizing: 'border-box',
@@ -78,23 +45,38 @@ const styles = {
     padding: '10px 12px',
     outline: 'none'
   },
-  list: {
-    margin: '8px 0 0',
-    paddingLeft: '20px',
-    color: '#d1d5db'
+  movieGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '14px' },
+  movieCard: {
+    background: 'rgba(31, 41, 55, 0.85)',
+    border: '1px solid #4b5563',
+    borderRadius: '12px',
+    padding: '10px'
   },
-  listItem: {
-    marginBottom: '8px',
-    lineHeight: 1.4
-  }
+  poster: { width: '100%', aspectRatio: '2 / 3', objectFit: 'cover', borderRadius: '8px', background: '#111827' }
 }
 
-const tabButtonStyle = (isActive) => ({
-  ...styles.button,
-  ...(isActive ? styles.activeButton : styles.ghostButton)
-})
+function usePath() {
+  const [path, setPath] = useState(window.location.pathname)
+
+  useEffect(() => {
+    const onPopState = () => setPath(window.location.pathname)
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+
+  const navigate = (nextPath) => {
+    if (nextPath !== window.location.pathname) {
+      window.history.pushState({}, '', nextPath)
+      setPath(nextPath)
+    }
+  }
+
+  return { path, navigate }
+}
 
 function App() {
+  const { path, navigate } = usePath()
+
   const [token, setToken] = useState(localStorage.getItem('token') || '')
   const [currentUser, setCurrentUser] = useState(() => {
     const saved = localStorage.getItem('currentUser')
@@ -103,30 +85,34 @@ function App() {
   const [fullName, setFullName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [activeTab, setActiveTab] = useState(token ? 'movies' : 'login')
+  const [authTab, setAuthTab] = useState('login')
   const [message, setMessage] = useState({ type: '', text: '' })
 
-  const [movies, setMovies] = useState([])
-  const [title, setTitle] = useState('')
-  const [searchMovieId, setSearchMovieId] = useState('')
-
-  const [movieIdForReview, setMovieIdForReview] = useState('')
-  const [rating, setRating] = useState(5)
-  const [comment, setComment] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [searchResults, setSearchResults] = useState([])
+  const [savedMovies, setSavedMovies] = useState([])
 
   const [reviews, setReviews] = useState([])
-  const [searchReviewId, setSearchReviewId] = useState('')
-  const [deleteReviewId, setDeleteReviewId] = useState('')
+  const [reviewForm, setReviewForm] = useState({ movieId: '', rating: 5, comment: '' })
+  const [editReviewId, setEditReviewId] = useState('')
 
   const authHeader = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token])
+
+  const showSuccess = (text) => setMessage({ type: 'success', text })
+  const showError = (text) => setMessage({ type: 'error', text })
 
   const handleApiError = async (response) => {
     const data = await response.json().catch(() => ({}))
     throw new Error(data.error || 'Unexpected error')
   }
 
-  const showSuccess = (text) => setMessage({ type: 'success', text })
-  const showError = (text) => setMessage({ type: 'error', text })
+  const guardedNavigate = (target) => {
+    if (!token) {
+      navigate('/')
+      return
+    }
+    navigate(target)
+  }
 
   const register = async () => {
     try {
@@ -135,13 +121,10 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ fullName, email, password })
       })
-
-      if (!response.ok) {
-        await handleApiError(response)
-      }
-
+      if (!response.ok) await handleApiError(response)
       const data = await response.json()
       showSuccess(`Inscription réussie. userId: ${data.userId}`)
+      setAuthTab('login')
     } catch (err) {
       showError(err.message)
     }
@@ -154,17 +137,13 @@ function App() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
       })
-
-      if (!response.ok) {
-        await handleApiError(response)
-      }
-
+      if (!response.ok) await handleApiError(response)
       const data = await response.json()
       setToken(data.token)
       setCurrentUser(data.user)
       localStorage.setItem('token', data.token)
       localStorage.setItem('currentUser', JSON.stringify(data.user))
-      setActiveTab('movies')
+      navigate('/films')
       showSuccess(`Connexion réussie. Bienvenue ${data.user?.fullName || ''}`.trim())
     } catch (err) {
       showError(err.message)
@@ -176,132 +155,151 @@ function App() {
     setCurrentUser(null)
     localStorage.removeItem('token')
     localStorage.removeItem('currentUser')
-    setActiveTab('login')
+    navigate('/')
     showSuccess('Déconnexion réussie.')
   }
 
-  const addMovie = async () => {
+  const searchTmdbMovies = async () => {
+    try {
+      const query = searchTerm.trim()
+      if (!query) throw new Error('Entrez un nom de film à rechercher')
+
+      const response = await fetch(`/movies/search?q=${encodeURIComponent(query)}`, {
+        headers: { ...authHeader }
+      })
+      if (!response.ok) await handleApiError(response)
+      const data = await response.json()
+      setSearchResults(data.results || [])
+      showSuccess('Résultats TMDB chargés.')
+    } catch (err) {
+      showError(err.message)
+    }
+  }
+
+  const loadSavedMovies = async () => {
+    try {
+      const response = await fetch('/movies', { headers: { ...authHeader } })
+      if (!response.ok) await handleApiError(response)
+      const data = await response.json()
+      setSavedMovies(data.movies || [])
+    } catch (err) {
+      showError(err.message)
+    }
+  }
+
+  const addMovie = async (movie) => {
     try {
       const response = await fetch('/movies', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeader },
-        body: JSON.stringify({ title })
+        body: JSON.stringify({
+          title: movie.title,
+          tmdbId: movie.tmdbId,
+          posterPath: movie.posterPath
+        })
       })
-
-      if (!response.ok) {
-        await handleApiError(response)
-      }
-
-      const data = await response.json()
-      setMovies((prev) => [data, ...prev])
-      showSuccess('Film ajouté.')
+      if (!response.ok) await handleApiError(response)
+      showSuccess(`Film "${movie.title}" ajouté.`)
+      loadSavedMovies()
     } catch (err) {
       showError(err.message)
     }
   }
 
-  const getMovieById = async () => {
+  const deleteMovie = async (movieId) => {
     try {
-      const response = await fetch(`/movies/${searchMovieId}`, {
+      const response = await fetch(`/movies/${movieId}`, {
+        method: 'DELETE',
         headers: { ...authHeader }
       })
-
-      if (!response.ok) {
-        await handleApiError(response)
-      }
-
-      const data = await response.json()
-      setMovies([data])
-      showSuccess('Film récupéré.')
+      if (!response.ok) await handleApiError(response)
+      showSuccess('Film supprimé.')
+      setSavedMovies((prev) => prev.filter((movie) => movie.id !== movieId))
     } catch (err) {
       showError(err.message)
     }
   }
 
-  const addReview = async () => {
+  const loadReviews = async () => {
+    try {
+      const response = await fetch('/reviews', { headers: { ...authHeader } })
+      if (!response.ok) await handleApiError(response)
+      const data = await response.json()
+      setReviews(data.reviews || [])
+    } catch (err) {
+      showError(err.message)
+    }
+  }
+
+  const createReview = async () => {
     try {
       const response = await fetch('/reviews', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeader },
         body: JSON.stringify({
-          movieId: movieIdForReview,
-          rating: Number(rating),
-          comment
+          movieId: reviewForm.movieId,
+          rating: Number(reviewForm.rating),
+          comment: reviewForm.comment
         })
       })
-
-      if (!response.ok) {
-        await handleApiError(response)
-      }
-
-      const data = await response.json()
-      setReviews((prev) => [data, ...prev])
-      showSuccess('Review ajoutée.')
+      if (!response.ok) await handleApiError(response)
+      showSuccess('Review créée.')
+      setReviewForm({ movieId: '', rating: 5, comment: '' })
+      loadReviews()
     } catch (err) {
       showError(err.message)
     }
   }
 
-  const getReviewsByMovie = async () => {
+  const updateReview = async (reviewId) => {
     try {
-      const response = await fetch(`/movies/${movieIdForReview}/reviews`, {
-        headers: { ...authHeader }
+      const target = reviews.find((review) => review.id === reviewId)
+      if (!target) return
+
+      const response = await fetch(`/reviews/${reviewId}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...authHeader },
+        body: JSON.stringify({ rating: target.rating, comment: target.comment })
       })
-
-      if (!response.ok) {
-        await handleApiError(response)
-      }
-
-      const data = await response.json()
-      setReviews(data.reviews || [])
-      showSuccess('Reviews récupérées.')
+      if (!response.ok) await handleApiError(response)
+      setEditReviewId('')
+      showSuccess('Review mise à jour.')
+      loadReviews()
     } catch (err) {
       showError(err.message)
     }
   }
 
-  const getReviewById = async () => {
+  const removeReview = async (reviewId) => {
     try {
-      const response = await fetch(`/reviews/${searchReviewId}`, {
-        headers: { ...authHeader }
-      })
-
-      if (!response.ok) {
-        await handleApiError(response)
-      }
-
-      const data = await response.json()
-      setReviews([data])
-      showSuccess('Review récupérée.')
-    } catch (err) {
-      showError(err.message)
-    }
-  }
-
-  const deleteReview = async () => {
-    try {
-      const response = await fetch(`/reviews/${deleteReviewId}`, {
+      const response = await fetch(`/reviews/${reviewId}`, {
         method: 'DELETE',
         headers: { ...authHeader }
       })
-
-      if (!response.ok) {
-        await handleApiError(response)
-      }
-
-      const data = await response.json()
-      setReviews((prev) => prev.filter((r) => r.id !== deleteReviewId))
-      showSuccess(data.message || 'Review supprimée.')
+      if (!response.ok) await handleApiError(response)
+      setReviews((prev) => prev.filter((review) => review.id !== reviewId))
+      showSuccess('Review supprimée.')
     } catch (err) {
       showError(err.message)
     }
   }
+
+  useEffect(() => {
+    if (!token) return
+    if (path === '/films') loadSavedMovies()
+    if (path === '/review') loadReviews()
+  }, [path, token])
+
+  useEffect(() => {
+    if (token && path === '/') navigate('/films')
+    if (!token && path !== '/') navigate('/')
+  }, [token])
 
   return (
     <main style={styles.page}>
       <div style={styles.container}>
         <h1 style={styles.title}>🎬 Movies Microservices Client</h1>
-        <p style={styles.subtitle}>Interface unifiée pour Auth, Movies et Reviews.</p>
+        <p style={styles.subtitle}>Recherche TMDB + gestion des films et reviews.</p>
 
         {message.text && (
           <p
@@ -319,171 +317,125 @@ function App() {
         {!token ? (
           <section style={styles.card}>
             <div style={styles.tabs}>
-              <button style={tabButtonStyle(activeTab === 'register')} onClick={() => setActiveTab('register')}>Créer un compte</button>
-              <button style={tabButtonStyle(activeTab === 'login')} onClick={() => setActiveTab('login')}>Se connecter</button>
+              <button style={{ ...styles.button, ...(authTab === 'register' ? {} : styles.ghostButton) }} onClick={() => setAuthTab('register')}>Créer un compte</button>
+              <button style={{ ...styles.button, ...(authTab === 'login' ? {} : styles.ghostButton) }} onClick={() => setAuthTab('login')}>Se connecter</button>
             </div>
-
             <div style={styles.grid}>
-              {activeTab === 'register' && (
-                <input
-                  style={styles.input}
-                  type="text"
-                  placeholder="Nom complet"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                />
-              )}
-              <input
-                style={styles.input}
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-              />
-              <input
-                style={styles.input}
-                type="password"
-                placeholder="Mot de passe"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              {authTab === 'register' && <input style={styles.input} type="text" placeholder="Nom complet" value={fullName} onChange={(e) => setFullName(e.target.value)} />}
+              <input style={styles.input} type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+              <input style={styles.input} type="password" placeholder="Mot de passe" value={password} onChange={(e) => setPassword(e.target.value)} />
             </div>
-
-            {activeTab === 'register' ? (
-              <button style={styles.button} onClick={register}>S'inscrire</button>
-            ) : (
-              <button style={styles.button} onClick={login}>Se connecter</button>
-            )}
+            <div style={{ marginTop: 12 }}>
+              {authTab === 'register' ? (
+                <button style={styles.button} onClick={register}>S'inscrire</button>
+              ) : (
+                <button style={styles.button} onClick={login}>Se connecter</button>
+              )}
+            </div>
           </section>
         ) : (
           <>
-            {currentUser && (
-              <section style={styles.card}>
-                <h2 style={styles.sectionTitle}>Utilisateur connecté</h2>
-                <p style={{ margin: 0 }}>
-                  {currentUser.fullName} — {currentUser.email} (id: {currentUser.id})
-                </p>
-              </section>
-            )}
-            <div style={styles.tabs}>
-              <button style={tabButtonStyle(activeTab === 'movies')} onClick={() => setActiveTab('movies')}>Movies</button>
-              <button style={tabButtonStyle(activeTab === 'reviews')} onClick={() => setActiveTab('reviews')}>Reviews</button>
-              <button style={{ ...styles.button, background: '#b91c1c' }} onClick={logout}>Logout</button>
-            </div>
+            <section style={styles.card}>
+              <div style={styles.tabs}>
+                <button style={{ ...styles.button, ...(path === '/films' ? {} : styles.ghostButton) }} onClick={() => guardedNavigate('/films')}>/films</button>
+                <button style={{ ...styles.button, ...(path === '/review' ? {} : styles.ghostButton) }} onClick={() => guardedNavigate('/review')}>/review</button>
+                <button style={{ ...styles.button, ...styles.dangerButton }} onClick={logout}>Logout</button>
+              </div>
+              {currentUser && <p style={{ margin: 0 }}>{currentUser.fullName} — {currentUser.email}</p>}
+            </section>
 
-            {activeTab === 'movies' && (
+            {path === '/films' && (
               <>
                 <section style={styles.card}>
-                  <h2 style={styles.sectionTitle}>Ajouter un film</h2>
-                  <div style={styles.grid}>
-                    <input
-                      style={styles.input}
-                      placeholder="Titre"
-                      value={title}
-                      onChange={(e) => setTitle(e.target.value)}
-                    />
+                  <h2 style={styles.sectionTitle}>Recherche de films (API TMDB externe)</h2>
+                  <div style={{ ...styles.grid, gridTemplateColumns: '1fr auto' }}>
+                    <input style={styles.input} placeholder="Nom du film" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                    <button style={styles.button} onClick={searchTmdbMovies}>Rechercher</button>
                   </div>
-                  <button style={styles.button} onClick={addMovie}>Ajouter le film</button>
+                  <div style={{ marginTop: 14 }}>
+                    <div style={styles.movieGrid}>
+                      {searchResults.map((movie) => (
+                        <div key={movie.tmdbId} style={styles.movieCard}>
+                          {movie.posterPath ? <img src={movie.posterPath} alt={movie.title} style={styles.poster} /> : <div style={styles.poster} />}
+                          <p><strong>{movie.title}</strong></p>
+                          <button style={styles.button} onClick={() => addMovie(movie)}>Ajouter</button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </section>
 
                 <section style={styles.card}>
-                  <h2 style={styles.sectionTitle}>Rechercher un film</h2>
-                  <div style={styles.grid}>
-                    <input
-                      style={styles.input}
-                      placeholder="Movie ID"
-                      value={searchMovieId}
-                      onChange={(e) => setSearchMovieId(e.target.value)}
-                    />
-                  </div>
-                  <button style={styles.button} onClick={getMovieById}>Rechercher</button>
-
-                  <ul style={styles.list}>
-                    {movies.map((movie) => (
-                      <li key={movie.id} style={styles.listItem}>
-                        <strong>{movie.title}</strong> — userId: {movie.userId} (id: {movie.id})
-                      </li>
+                  <h2 style={styles.sectionTitle}>Films ajoutés (/films)</h2>
+                  <div style={styles.movieGrid}>
+                    {savedMovies.map((movie) => (
+                      <div key={movie.id} style={styles.movieCard}>
+                        {movie.posterPath ? <img src={movie.posterPath} alt={movie.title} style={styles.poster} /> : <div style={styles.poster} />}
+                        <p><strong>{movie.title}</strong></p>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <button
+                            style={{ ...styles.button, ...styles.ghostButton }}
+                            onClick={() => {
+                              setReviewForm((prev) => ({ ...prev, movieId: movie.id }))
+                              guardedNavigate('/review')
+                            }}
+                          >
+                            Ajouter review
+                          </button>
+                          <button style={{ ...styles.button, ...styles.dangerButton }} onClick={() => deleteMovie(movie.id)}>Supprimer</button>
+                        </div>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </section>
               </>
             )}
 
-            {activeTab === 'reviews' && (
+            {path === '/review' && (
               <>
                 <section style={styles.card}>
-                  <h2 style={styles.sectionTitle}>Ajouter une review</h2>
+                  <h2 style={styles.sectionTitle}>CRUD simple des reviews (/review)</h2>
                   <div style={styles.grid}>
-                    <input
-                      style={styles.input}
-                      placeholder="Movie ID"
-                      value={movieIdForReview}
-                      onChange={(e) => setMovieIdForReview(e.target.value)}
-                    />
-                    <input
-                      style={styles.input}
-                      type="number"
-                      min="1"
-                      max="5"
-                      placeholder="Rating (1-5)"
-                      value={rating}
-                      onChange={(e) => setRating(e.target.value)}
-                    />
-                    <input
-                      style={styles.input}
-                      placeholder="Commentaire"
-                      value={comment}
-                      onChange={(e) => setComment(e.target.value)}
-                    />
+                    <input style={styles.input} placeholder="Movie ID" value={reviewForm.movieId} onChange={(e) => setReviewForm((prev) => ({ ...prev, movieId: e.target.value }))} />
+                    <input style={styles.input} type="number" min="1" max="5" value={reviewForm.rating} onChange={(e) => setReviewForm((prev) => ({ ...prev, rating: e.target.value }))} />
+                    <input style={styles.input} placeholder="Commentaire" value={reviewForm.comment} onChange={(e) => setReviewForm((prev) => ({ ...prev, comment: e.target.value }))} />
                   </div>
-                  <button style={styles.button} onClick={addReview}>Ajouter review</button>
+                  <div style={{ marginTop: 12 }}>
+                    <button style={styles.button} onClick={createReview}>Créer review</button>
+                  </div>
                 </section>
 
                 <section style={styles.card}>
-                  <h2 style={styles.sectionTitle}>Charger les reviews d'un film</h2>
-                  <div style={styles.grid}>
-                    <input
-                      style={styles.input}
-                      placeholder="Movie ID"
-                      value={movieIdForReview}
-                      onChange={(e) => setMovieIdForReview(e.target.value)}
-                    />
-                  </div>
-                  <button style={styles.button} onClick={getReviewsByMovie}>Charger reviews</button>
-                </section>
-
-                <section style={styles.card}>
-                  <h2 style={styles.sectionTitle}>Rechercher une review</h2>
-                  <div style={styles.grid}>
-                    <input
-                      style={styles.input}
-                      placeholder="Review ID"
-                      value={searchReviewId}
-                      onChange={(e) => setSearchReviewId(e.target.value)}
-                    />
-                  </div>
-                  <button style={styles.button} onClick={getReviewById}>Rechercher review</button>
-                </section>
-
-                <section style={styles.card}>
-                  <h2 style={styles.sectionTitle}>Supprimer une review</h2>
-                  <div style={styles.grid}>
-                    <input
-                      style={styles.input}
-                      placeholder="Review ID"
-                      value={deleteReviewId}
-                      onChange={(e) => setDeleteReviewId(e.target.value)}
-                    />
-                  </div>
-                  <button style={{ ...styles.button, background: '#b91c1c' }} onClick={deleteReview}>Supprimer review</button>
-
-                  <ul style={styles.list}>
+                  <h2 style={styles.sectionTitle}>Mes reviews</h2>
+                  <button style={{ ...styles.button, ...styles.ghostButton, marginBottom: 12 }} onClick={loadReviews}>Rafraîchir</button>
+                  <div style={{ display: 'grid', gap: 10 }}>
                     {reviews.map((review) => (
-                      <li key={review.id} style={styles.listItem}>
-                        {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)} — {review.comment} — userId: {review.userId} — {new Date(review.createdAt).toLocaleString()}
-                      </li>
+                      <div key={review.id} style={styles.movieCard}>
+                        <p style={{ marginTop: 0 }}><strong>Movie ID:</strong> {review.movieId}</p>
+                        <div style={{ display: 'grid', gap: 8 }}>
+                          <input
+                            style={styles.input}
+                            type="number"
+                            min="1"
+                            max="5"
+                            value={review.rating}
+                            onChange={(e) => setReviews((prev) => prev.map((item) => (item.id === review.id ? { ...item, rating: Number(e.target.value) } : item)))}
+                          />
+                          <input
+                            style={styles.input}
+                            value={review.comment}
+                            onChange={(e) => setReviews((prev) => prev.map((item) => (item.id === review.id ? { ...item, comment: e.target.value } : item)))}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                          <button style={styles.button} onClick={() => { setEditReviewId(review.id); updateReview(review.id) }}>
+                            {editReviewId === review.id ? 'Sauvegarde...' : 'Mettre à jour'}
+                          </button>
+                          <button style={{ ...styles.button, ...styles.dangerButton }} onClick={() => removeReview(review.id)}>Supprimer</button>
+                        </div>
+                      </div>
                     ))}
-                  </ul>
+                  </div>
                 </section>
               </>
             )}

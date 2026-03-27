@@ -32,15 +32,22 @@ function mapReview(review) {
   }
 }
 
+function validateRating(rating, callback) {
+  if (rating < 1 || rating > 5) {
+    callback({
+      code: grpc.status.INVALID_ARGUMENT,
+      message: 'Rating must be between 1 and 5'
+    })
+    return false
+  }
+  return true
+}
+
 async function createReview(call, callback) {
   try {
     const { movieId, userId, rating, comment } = call.request
 
-    if (rating < 1 || rating > 5) {
-      callback({
-        code: grpc.status.INVALID_ARGUMENT,
-        message: 'Rating must be between 1 and 5'
-      })
+    if (!validateRating(rating, callback)) {
       return
     }
 
@@ -68,8 +75,42 @@ async function getReview(call, callback) {
 
 async function getMovieReviews(call, callback) {
   try {
-    const reviews = await Review.find({ movieId: call.request.movieId })
+    const reviews = await Review.find({ movieId: call.request.movieId }).sort({ _id: -1 })
     callback(null, { reviews: reviews.map(mapReview) })
+  } catch (err) {
+    callback({ code: grpc.status.INTERNAL, message: err.message })
+  }
+}
+
+async function getUserReviews(call, callback) {
+  try {
+    const reviews = await Review.find({ userId: call.request.userId }).sort({ _id: -1 })
+    callback(null, { reviews: reviews.map(mapReview) })
+  } catch (err) {
+    callback({ code: grpc.status.INTERNAL, message: err.message })
+  }
+}
+
+async function updateReview(call, callback) {
+  try {
+    const { id, rating, comment } = call.request
+
+    if (!validateRating(rating, callback)) {
+      return
+    }
+
+    const review = await Review.findByIdAndUpdate(
+      id,
+      { rating, comment },
+      { new: true }
+    )
+
+    if (!review) {
+      callback({ code: grpc.status.NOT_FOUND, message: 'Review not found' })
+      return
+    }
+
+    callback(null, mapReview(review))
   } catch (err) {
     callback({ code: grpc.status.INTERNAL, message: err.message })
   }
@@ -94,6 +135,8 @@ server.addService(reviewProto.ReviewService.service, {
   CreateReview: createReview,
   GetReview: getReview,
   GetMovieReviews: getMovieReviews,
+  GetUserReviews: getUserReviews,
+  UpdateReview: updateReview,
   DeleteReview: deleteReview
 })
 
