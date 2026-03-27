@@ -1,0 +1,88 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  auth-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: node auth-service/server.js
+    env_file:
+      - .env
+    environment:
+      RABBITMQ_URL: amqp://rabbitmq:5672
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: node user-service/server.js
+    env_file:
+      - .env
+
+  movie-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: node movie-service/server.js
+    env_file:
+      - .env
+
+  review-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: node review-service/server.js
+    env_file:
+      - .env
+
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: node api-gateway/server.js
+    env_file:
+      - .env
+    environment:
+      RABBITMQ_URL: amqp://rabbitmq:5672
+      USER_SERVICE_ADDR: user-service:50051
+      MOVIE_SERVICE_ADDR: movie-service:50052
+      REVIEW_SERVICE_ADDR: review-service:50053
+      CORS_ORIGIN: http://localhost:3001
+    ports:
+      - "3000:3000"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      auth-service:
+        condition: service_started
+      user-service:
+        condition: service_started
+      movie-service:
+        condition: service_started
+      review-service:
+        condition: service_started
+
+  movies-client:
+    build:
+      context: .
+      dockerfile: Dockerfile.client
+    environment:
+      REACT_APP_API_BASE_URL: http://localhost:3000
+      PORT: 3001
+    ports:
+      - "3001:3001"
+    depends_on:
+      api-gateway:
+        condition: service_started
