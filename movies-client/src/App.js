@@ -1,5 +1,99 @@
 import React, { useMemo, useState } from 'react'
 
+const styles = {
+  page: {
+    minHeight: '100vh',
+    margin: 0,
+    background: 'linear-gradient(180deg, #0f172a 0%, #111827 45%, #1f2937 100%)',
+    color: '#e5e7eb',
+    padding: '32px 16px',
+    fontFamily: "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif"
+  },
+  container: {
+    maxWidth: '1000px',
+    margin: '0 auto'
+  },
+  title: {
+    margin: '0 0 8px',
+    fontSize: '2rem'
+  },
+  subtitle: {
+    margin: '0 0 24px',
+    color: '#9ca3af'
+  },
+  alert: {
+    padding: '12px 14px',
+    borderRadius: '10px',
+    marginBottom: '16px',
+    fontWeight: 500
+  },
+  tabs: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '10px',
+    marginBottom: '20px'
+  },
+  button: {
+    border: 0,
+    borderRadius: '10px',
+    padding: '10px 14px',
+    cursor: 'pointer',
+    fontWeight: 600,
+    background: '#374151',
+    color: '#e5e7eb'
+  },
+  activeButton: {
+    background: '#2563eb',
+    color: '#ffffff'
+  },
+  ghostButton: {
+    background: '#1f2937',
+    border: '1px solid #4b5563'
+  },
+  card: {
+    background: 'rgba(17, 24, 39, 0.9)',
+    border: '1px solid #374151',
+    borderRadius: '16px',
+    padding: '18px',
+    boxShadow: '0 8px 30px rgba(0,0,0,0.25)',
+    marginBottom: '16px'
+  },
+  sectionTitle: {
+    margin: '0 0 12px',
+    fontSize: '1.15rem'
+  },
+  grid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+    gap: '12px',
+    marginBottom: '12px'
+  },
+  input: {
+    width: '100%',
+    boxSizing: 'border-box',
+    border: '1px solid #4b5563',
+    background: '#111827',
+    color: '#f3f4f6',
+    borderRadius: '10px',
+    padding: '10px 12px',
+    outline: 'none'
+  },
+  list: {
+    margin: '8px 0 0',
+    paddingLeft: '20px',
+    color: '#d1d5db'
+  },
+  listItem: {
+    marginBottom: '8px',
+    lineHeight: 1.4
+  }
+}
+
+const tabButtonStyle = (isActive) => ({
+  ...styles.button,
+  ...(isActive ? styles.activeButton : styles.ghostButton)
+})
+
 function App() {
   const [token, setToken] = useState(localStorage.getItem('token') || '')
   const [email, setEmail] = useState('')
@@ -198,180 +292,194 @@ function App() {
   }
 
   return (
-    <div style={{ padding: '20px' }}>
-      <h1>Movies Microservices Client</h1>
+    <main style={styles.page}>
+      <div style={styles.container}>
+        <h1 style={styles.title}>🎬 Movies Microservices Client</h1>
+        <p style={styles.subtitle}>Interface unifiée pour Auth, Movies et Reviews.</p>
 
-      {message.text && (
-        <p style={{ color: message.type === 'success' ? 'green' : 'red' }}>{message.text}</p>
-      )}
+        {message.text && (
+          <p
+            style={{
+              ...styles.alert,
+              background: message.type === 'success' ? 'rgba(22, 163, 74, 0.18)' : 'rgba(220, 38, 38, 0.18)',
+              border: message.type === 'success' ? '1px solid #22c55e' : '1px solid #ef4444',
+              color: message.type === 'success' ? '#86efac' : '#fecaca'
+            }}
+          >
+            {message.text}
+          </p>
+        )}
 
-      {!token ? (
-        <>
-          <div>
-            <button style={{ cursor: 'pointer' }} onClick={() => setActiveTab('register')}>Register</button>{' '}
-            <button style={{ cursor: 'pointer' }} onClick={() => setActiveTab('login')}>Login</button>
-          </div>
+        {!token ? (
+          <section style={styles.card}>
+            <div style={styles.tabs}>
+              <button style={tabButtonStyle(activeTab === 'register')} onClick={() => setActiveTab('register')}>Créer un compte</button>
+              <button style={tabButtonStyle(activeTab === 'login')} onClick={() => setActiveTab('login')}>Se connecter</button>
+            </div>
 
-          <hr />
-
-          <input
-            style={{ marginBottom: '8px' }}
-            type="email"
-            placeholder="Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <br />
-          <input
-            style={{ marginBottom: '8px' }}
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <br />
-
-          {activeTab === 'register' ? (
-            <button style={{ cursor: 'pointer' }} onClick={register}>S'inscrire</button>
-          ) : (
-            <button style={{ cursor: 'pointer' }} onClick={login}>Se connecter</button>
-          )}
-        </>
-      ) : (
-        <>
-          <div>
-            <button style={{ cursor: 'pointer' }} onClick={() => setActiveTab('movies')}>Movies</button>{' '}
-            <button style={{ cursor: 'pointer' }} onClick={() => setActiveTab('reviews')}>Reviews</button>{' '}
-            <button style={{ cursor: 'pointer' }} onClick={logout}>Logout</button>
-          </div>
-
-          <hr />
-
-          {activeTab === 'movies' && (
-            <>
-              <h2>Add Movie</h2>
+            <div style={styles.grid}>
               <input
-                style={{ marginBottom: '8px' }}
-                placeholder="Title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
+                style={styles.input}
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
               />
-              <br />
               <input
-                style={{ marginBottom: '8px' }}
-                placeholder="User ID"
-                value={userId}
-                onChange={(e) => setUserId(e.target.value)}
+                style={styles.input}
+                type="password"
+                placeholder="Mot de passe"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
-              <br />
-              <button style={{ cursor: 'pointer' }} onClick={addMovie}>Ajouter le film</button>
+            </div>
 
-              <hr />
+            {activeTab === 'register' ? (
+              <button style={styles.button} onClick={register}>S'inscrire</button>
+            ) : (
+              <button style={styles.button} onClick={login}>Se connecter</button>
+            )}
+          </section>
+        ) : (
+          <>
+            <div style={styles.tabs}>
+              <button style={tabButtonStyle(activeTab === 'movies')} onClick={() => setActiveTab('movies')}>Movies</button>
+              <button style={tabButtonStyle(activeTab === 'reviews')} onClick={() => setActiveTab('reviews')}>Reviews</button>
+              <button style={{ ...styles.button, background: '#b91c1c' }} onClick={logout}>Logout</button>
+            </div>
 
-              <h2>Get Movie by ID</h2>
-              <input
-                style={{ marginBottom: '8px' }}
-                placeholder="Movie ID"
-                value={searchMovieId}
-                onChange={(e) => setSearchMovieId(e.target.value)}
-              />
-              <br />
-              <button style={{ cursor: 'pointer' }} onClick={getMovieById}>Rechercher</button>
+            {activeTab === 'movies' && (
+              <>
+                <section style={styles.card}>
+                  <h2 style={styles.sectionTitle}>Ajouter un film</h2>
+                  <div style={styles.grid}>
+                    <input
+                      style={styles.input}
+                      placeholder="Titre"
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                    />
+                    <input
+                      style={styles.input}
+                      placeholder="User ID"
+                      value={userId}
+                      onChange={(e) => setUserId(e.target.value)}
+                    />
+                  </div>
+                  <button style={styles.button} onClick={addMovie}>Ajouter le film</button>
+                </section>
 
-              <ul>
-                {movies.map((movie) => (
-                  <li key={movie.id}>
-                    <strong>{movie.title}</strong> — userId: {movie.userId} (id: {movie.id})
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
+                <section style={styles.card}>
+                  <h2 style={styles.sectionTitle}>Rechercher un film</h2>
+                  <div style={styles.grid}>
+                    <input
+                      style={styles.input}
+                      placeholder="Movie ID"
+                      value={searchMovieId}
+                      onChange={(e) => setSearchMovieId(e.target.value)}
+                    />
+                  </div>
+                  <button style={styles.button} onClick={getMovieById}>Rechercher</button>
 
-          {activeTab === 'reviews' && (
-            <>
-              <h2>Add Review</h2>
-              <input
-                style={{ marginBottom: '8px' }}
-                placeholder="Movie ID"
-                value={movieIdForReview}
-                onChange={(e) => setMovieIdForReview(e.target.value)}
-              />
-              <br />
-              <input
-                style={{ marginBottom: '8px' }}
-                placeholder="User ID"
-                value={userIdForReview}
-                onChange={(e) => setUserIdForReview(e.target.value)}
-              />
-              <br />
-              <input
-                style={{ marginBottom: '8px' }}
-                type="number"
-                min="1"
-                max="5"
-                placeholder="Rating (1-5)"
-                value={rating}
-                onChange={(e) => setRating(e.target.value)}
-              />
-              <br />
-              <input
-                style={{ marginBottom: '8px' }}
-                placeholder="Comment"
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-              />
-              <br />
-              <button style={{ cursor: 'pointer' }} onClick={addReview}>Ajouter review</button>
+                  <ul style={styles.list}>
+                    {movies.map((movie) => (
+                      <li key={movie.id} style={styles.listItem}>
+                        <strong>{movie.title}</strong> — userId: {movie.userId} (id: {movie.id})
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              </>
+            )}
 
-              <hr />
+            {activeTab === 'reviews' && (
+              <>
+                <section style={styles.card}>
+                  <h2 style={styles.sectionTitle}>Ajouter une review</h2>
+                  <div style={styles.grid}>
+                    <input
+                      style={styles.input}
+                      placeholder="Movie ID"
+                      value={movieIdForReview}
+                      onChange={(e) => setMovieIdForReview(e.target.value)}
+                    />
+                    <input
+                      style={styles.input}
+                      placeholder="User ID"
+                      value={userIdForReview}
+                      onChange={(e) => setUserIdForReview(e.target.value)}
+                    />
+                    <input
+                      style={styles.input}
+                      type="number"
+                      min="1"
+                      max="5"
+                      placeholder="Rating (1-5)"
+                      value={rating}
+                      onChange={(e) => setRating(e.target.value)}
+                    />
+                    <input
+                      style={styles.input}
+                      placeholder="Commentaire"
+                      value={comment}
+                      onChange={(e) => setComment(e.target.value)}
+                    />
+                  </div>
+                  <button style={styles.button} onClick={addReview}>Ajouter review</button>
+                </section>
 
-              <h2>Get Reviews by Movie</h2>
-              <input
-                style={{ marginBottom: '8px' }}
-                placeholder="Movie ID"
-                value={movieIdForReview}
-                onChange={(e) => setMovieIdForReview(e.target.value)}
-              />
-              <br />
-              <button style={{ cursor: 'pointer' }} onClick={getReviewsByMovie}>Charger reviews</button>
+                <section style={styles.card}>
+                  <h2 style={styles.sectionTitle}>Charger les reviews d'un film</h2>
+                  <div style={styles.grid}>
+                    <input
+                      style={styles.input}
+                      placeholder="Movie ID"
+                      value={movieIdForReview}
+                      onChange={(e) => setMovieIdForReview(e.target.value)}
+                    />
+                  </div>
+                  <button style={styles.button} onClick={getReviewsByMovie}>Charger reviews</button>
+                </section>
 
-              <hr />
+                <section style={styles.card}>
+                  <h2 style={styles.sectionTitle}>Rechercher une review</h2>
+                  <div style={styles.grid}>
+                    <input
+                      style={styles.input}
+                      placeholder="Review ID"
+                      value={searchReviewId}
+                      onChange={(e) => setSearchReviewId(e.target.value)}
+                    />
+                  </div>
+                  <button style={styles.button} onClick={getReviewById}>Rechercher review</button>
+                </section>
 
-              <h2>Get Review by ID</h2>
-              <input
-                style={{ marginBottom: '8px' }}
-                placeholder="Review ID"
-                value={searchReviewId}
-                onChange={(e) => setSearchReviewId(e.target.value)}
-              />
-              <br />
-              <button style={{ cursor: 'pointer' }} onClick={getReviewById}>Rechercher review</button>
+                <section style={styles.card}>
+                  <h2 style={styles.sectionTitle}>Supprimer une review</h2>
+                  <div style={styles.grid}>
+                    <input
+                      style={styles.input}
+                      placeholder="Review ID"
+                      value={deleteReviewId}
+                      onChange={(e) => setDeleteReviewId(e.target.value)}
+                    />
+                  </div>
+                  <button style={{ ...styles.button, background: '#b91c1c' }} onClick={deleteReview}>Supprimer review</button>
 
-              <hr />
-
-              <h2>Delete Review</h2>
-              <input
-                style={{ marginBottom: '8px' }}
-                placeholder="Review ID"
-                value={deleteReviewId}
-                onChange={(e) => setDeleteReviewId(e.target.value)}
-              />
-              <br />
-              <button style={{ cursor: 'pointer' }} onClick={deleteReview}>Supprimer review</button>
-
-              <ul>
-                {reviews.map((review) => (
-                  <li key={review.id}>
-                    {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)} — {review.comment} — userId: {review.userId} — {new Date(review.createdAt).toLocaleString()}
-                  </li>
-                ))}
-              </ul>
-            </>
-          )}
-        </>
-      )}
-    </div>
+                  <ul style={styles.list}>
+                    {reviews.map((review) => (
+                      <li key={review.id} style={styles.listItem}>
+                        {'★'.repeat(review.rating)}{'☆'.repeat(5 - review.rating)} — {review.comment} — userId: {review.userId} — {new Date(review.createdAt).toLocaleString()}
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </main>
   )
 }
 
