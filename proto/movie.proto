@@ -5,19 +5,38 @@ package movie;
 service MovieService {
   rpc CreateMovie (MovieRequest) returns (MovieResponse);
   rpc GetMovie (MovieId) returns (MovieResponse);
+  rpc GetUserMovies (UserMoviesRequest) returns (MovieListResponse);
+  rpc DeleteMovie (MovieId) returns (DeleteMovieResponse);
 }
 
 message MovieRequest {
   string title = 1;
   string userId = 2;
+  string tmdbId = 3;
+  string posterPath = 4;
 }
 
 message MovieId {
   string id = 1;
 }
 
+message UserMoviesRequest {
+  string userId = 1;
+}
+
 message MovieResponse {
   string id = 1;
   string title = 2;
   string userId = 3;
+  string tmdbId = 4;
+  string posterPath = 5;
+}
+
+message MovieListResponse {
+  repeated MovieResponse movies = 1;
+}
+
+message DeleteMovieResponse {
+  bool success = 1;
+  string message = 2;
 }

@@ -21,17 +21,23 @@ mongoose
     process.exit(1)
   })
 
+function mapMovie(movie) {
+  return {
+    id: movie._id.toString(),
+    title: movie.title,
+    userId: movie.userId,
+    tmdbId: movie.tmdbId || '',
+    posterPath: movie.posterPath || ''
+  }
+}
+
 async function createMovie(call, callback) {
   try {
-    const { title, userId } = call.request
-    const movie = new Movie({ title, userId })
+    const { title, userId, tmdbId, posterPath } = call.request
+    const movie = new Movie({ title, userId, tmdbId, posterPath })
     await movie.save()
 
-    callback(null, {
-      id: movie._id.toString(),
-      title: movie.title,
-      userId: movie.userId
-    })
+    callback(null, mapMovie(movie))
   } catch (err) {
     callback({ code: grpc.status.INTERNAL, message: err.message })
   }
@@ -45,11 +51,30 @@ async function getMovie(call, callback) {
       return
     }
 
-    callback(null, {
-      id: movie._id.toString(),
-      title: movie.title,
-      userId: movie.userId
-    })
+    callback(null, mapMovie(movie))
+  } catch (err) {
+    callback({ code: grpc.status.INTERNAL, message: err.message })
+  }
+}
+
+async function getUserMovies(call, callback) {
+  try {
+    const movies = await Movie.find({ userId: call.request.userId }).sort({ _id: -1 })
+    callback(null, { movies: movies.map(mapMovie) })
+  } catch (err) {
+    callback({ code: grpc.status.INTERNAL, message: err.message })
+  }
+}
+
+async function deleteMovie(call, callback) {
+  try {
+    const deleted = await Movie.findByIdAndDelete(call.request.id)
+    if (!deleted) {
+      callback({ code: grpc.status.NOT_FOUND, message: 'Movie not found' })
+      return
+    }
+
+    callback(null, { success: true, message: 'Movie deleted' })
   } catch (err) {
     callback({ code: grpc.status.INTERNAL, message: err.message })
   }
@@ -58,7 +83,9 @@ async function getMovie(call, callback) {
 const server = new grpc.Server()
 server.addService(movieProto.MovieService.service, {
   CreateMovie: createMovie,
-  GetMovie: getMovie
+  GetMovie: getMovie,
+  GetUserMovies: getUserMovies,
+  DeleteMovie: deleteMovie
 })
 
 server.bindAsync('0.0.0.0:50052', grpc.ServerCredentials.createInsecure(), (err) => {

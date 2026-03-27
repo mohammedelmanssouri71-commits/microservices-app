@@ -14,7 +14,7 @@ app.use(express.json())
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', 'http://localhost:3001')
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-  res.header('Access-Control-Allow-Methods', 'GET, POST, DELETE, OPTIONS')
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
   next()
 })
 app.options('*', (req, res) => res.sendStatus(200))
@@ -135,6 +135,38 @@ function grpcToHttpError(err, res) {
   return true
 }
 
+async function searchTmdbMovies(query) {
+  const tmdbApiKey = (process.env.TMDB_API_KEY || '').trim()
+
+  if (!tmdbApiKey) {
+    throw new Error('TMDB_API_KEY is missing in environment')
+  }
+
+  const url = `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(
+    query
+  )}&include_adult=false&language=fr-FR&page=1`
+
+  const response = await fetch(url, {
+    headers: {
+      accept: 'application/json',
+      Authorization: `Bearer ${tmdbApiKey}`
+    }
+  })
+
+  if (!response.ok) {
+    throw new Error(`TMDB error (${response.status})`)
+  }
+
+  const data = await response.json()
+  return (data.results || []).map((movie) => ({
+    tmdbId: String(movie.id),
+    title: movie.title,
+    posterPath: movie.poster_path
+      ? `https://image.tmdb.org/t/p/w500${movie.poster_path}`
+      : ''
+  }))
+}
+
 app.post('/auth/register', async (req, res) => {
   try {
     const { fullName, email, password } = req.body
@@ -170,17 +202,47 @@ app.get('/users/:id', authMiddleware, (req, res) => {
   })
 })
 
+app.get('/movies/search', authMiddleware, async (req, res) => {
+  const query = (req.query.q || '').toString().trim()
+
+  if (!query) {
+    res.status(400).json({ error: 'Query q is required' })
+    return
+  }
+
+  try {
+    const results = await searchTmdbMovies(query)
+    res.status(200).json({ results })
+  } catch (err) {
+    res.status(500).json({ error: err.message })
+  }
+})
+
 app.post('/movies', authMiddleware, (req, res) => {
-  const { title } = req.body
+  const { title, tmdbId = '', posterPath = '' } = req.body
   const userId = req.user.userId
-  movieClient.CreateMovie({ title, userId }, (err, response) => {
+  movieClient.CreateMovie({ title, userId, tmdbId, posterPath }, (err, response) => {
     if (grpcToHttpError(err, res)) return
     res.status(201).json(response)
   })
 })
 
+app.get('/movies', authMiddleware, (req, res) => {
+  movieClient.GetUserMovies({ userId: req.user.userId }, (err, response) => {
+    if (grpcToHttpError(err, res)) return
+    res.status(200).json(response)
+  })
+})
+
 app.get('/movies/:id', authMiddleware, (req, res) => {
   movieClient.GetMovie({ id: req.params.id }, (err, response) => {
+    if (grpcToHttpError(err, res)) return
+    res.status(200).json(response)
+  })
+})
+
+app.delete('/movies/:id', authMiddleware, (req, res) => {
+  movieClient.DeleteMovie({ id: req.params.id }, (err, response) => {
     if (grpcToHttpError(err, res)) return
     res.status(200).json(response)
   })
@@ -198,11 +260,29 @@ app.post('/reviews', authMiddleware, (req, res) => {
   )
 })
 
+app.get('/reviews', authMiddleware, (req, res) => {
+  reviewClient.GetUserReviews({ userId: req.user.userId }, (err, response) => {
+    if (grpcToHttpError(err, res)) return
+    res.status(200).json(response)
+  })
+})
+
 app.get('/reviews/:id', authMiddleware, (req, res) => {
   reviewClient.GetReview({ id: req.params.id }, (err, response) => {
     if (grpcToHttpError(err, res)) return
     res.status(200).json(response)
   })
+})
+
+app.put('/reviews/:id', authMiddleware, (req, res) => {
+  const { rating, comment } = req.body
+  reviewClient.UpdateReview(
+    { id: req.params.id, rating: Number(rating), comment },
+    (err, response) => {
+      if (grpcToHttpError(err, res)) return
+      res.status(200).json(response)
+    }
+  )
 })
 
 app.get('/movies/:id/reviews', authMiddleware, (req, res) => {
