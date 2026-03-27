@@ -14,13 +14,41 @@ Client React → REST API Gateway (3000) → gRPC → Microservices
 - api-gateway (REST Express, 3000)
 - movies-client (React, 3001)
 
-## Installation backend
+## Lancement avec Docker (recommandé)
+
+### Prérequis
+
+- Docker + Docker Compose
+- Un fichier `.env` à la racine (vous pouvez partir de `.env.example`)
+
+```bash
+cp .env.example .env
+# puis remplir les URI MongoDB Atlas + JWT_SECRET + TMDB_API_KEY
+```
+
+### Démarrer toute la stack
+
+```bash
+docker compose up --build
+```
+
+- Frontend : http://localhost:3001
+- API Gateway : http://localhost:3000
+- RabbitMQ UI : http://localhost:15672 (`guest/guest`)
+
+### Arrêter
+
+```bash
+docker compose down
+```
+
+## Installation backend (sans Docker)
 
 ```bash
 npm install
 ```
 
-## Installation frontend
+## Installation frontend (sans Docker)
 
 ```bash
 cd movies-client
@@ -67,7 +95,7 @@ Checklist Atlas :
 3. Ajouter IP dans Network Access
 4. Copier connection string Node.js
 
-## Lancement (ordre obligatoire)
+## Lancement sans Docker (ordre obligatoire)
 
 ```bash
 node auth-service/server.js

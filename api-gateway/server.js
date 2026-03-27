@@ -11,8 +11,10 @@ require('dotenv').config({ path: path.join(__dirname, '../.env') })
 const app = express()
 app.use(express.json())
 
+const corsOrigin = process.env.CORS_ORIGIN || 'http://localhost:3001'
+
 app.use((req, res, next) => {
-  res.header('Access-Control-Allow-Origin', 'http://localhost:3001')
+  res.header('Access-Control-Allow-Origin', corsOrigin)
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
   next()
@@ -27,9 +29,13 @@ const userProto = grpc.loadPackageDefinition(userPackage).user
 const movieProto = grpc.loadPackageDefinition(moviePackage).movie
 const reviewProto = grpc.loadPackageDefinition(reviewPackage).review
 
-const userClient = new userProto.UserService('localhost:50051', grpc.credentials.createInsecure())
-const movieClient = new movieProto.MovieService('localhost:50052', grpc.credentials.createInsecure())
-const reviewClient = new reviewProto.ReviewService('localhost:50053', grpc.credentials.createInsecure())
+const userServiceAddr = process.env.USER_SERVICE_ADDR || 'localhost:50051'
+const movieServiceAddr = process.env.MOVIE_SERVICE_ADDR || 'localhost:50052'
+const reviewServiceAddr = process.env.REVIEW_SERVICE_ADDR || 'localhost:50053'
+
+const userClient = new userProto.UserService(userServiceAddr, grpc.credentials.createInsecure())
+const movieClient = new movieProto.MovieService(movieServiceAddr, grpc.credentials.createInsecure())
+const reviewClient = new reviewProto.ReviewService(reviewServiceAddr, grpc.credentials.createInsecure())
 
 let rabbitChannel
 

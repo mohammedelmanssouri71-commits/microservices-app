@@ -1,0 +1,11 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+COPY movies-client/package*.json ./
+RUN npm ci
+
+COPY movies-client .
+
+EXPOSE 3001
+CMD ["npm", "start"]
